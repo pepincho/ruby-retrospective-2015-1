@@ -94,8 +94,8 @@ module DrunkenMathematician
     group_one = sequence.select { |i| i.numerator.is_prime? or i.denominator.is_prime? }
     group_two = sequence - group_one
 
-    first = group_one.inject { |z, x| z * x }
-    second = group_two.inject { |z, x| z * x }
+    first  = group_one.reduce(1, :*)
+    second = group_two.reduce(1, :*)
 
     (first == nil ? 1 : first) / (second == nil ? 1 : second)
   end
@@ -109,21 +109,18 @@ module DrunkenMathematician
     sequence.each_slice(2).to_a.each do |a|
       rational_numbers << Rational(a[0], a[1])
     end
-    sum_rational_numbers = rational_numbers.inject { |sum, x| sum + x }
+    sum_rational_numbers = rational_numbers.reduce(:+)
     sum_rational_numbers == nil ? 0 : sum_rational_numbers
   end
 
   def worthless(n)
     n_fibonacci = FibonacciSequence.new(n).to_a.last.to_r
-    sequence = RationalSequence.new(n).to_a
-    rational_section = []
-    index = 0
-    sum_rational = 0
-    while sum_rational < n_fibonacci
-      sum_rational += sequence[index]
-      if sum_rational <= n_fibonacci then rational_section << sequence[index] end
-      index += 1
-    end
-    rational_section
+    sequence = RationalSequence.new(Float::INFINITY).lazy
+    sum = 0
+
+    sequence.take_while do |rational|
+      sum += rational
+      sum <= n_fibonacci
+    end.force
   end
 end
