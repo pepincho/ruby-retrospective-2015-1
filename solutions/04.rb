@@ -1,14 +1,6 @@
-class Card
-  attr_reader :rank
-  attr_reader :suit
-
-  def initialize(rank, suit)
-    @rank = rank
-    @suit = suit
-  end
-
+class Card < Struct.new(:rank, :suit)
   def to_s
-    rank.to_s.capitalize + " of " + suit.to_s.capitalize
+    "#{rank.to_s.capitalize} of #{suit.to_s.capitalize}"
   end
 
   def ==(other)
@@ -73,6 +65,8 @@ class Deck
 end
 
 class Hand
+  SUITS = [:clubs, :diamonds, :hearts, :spades]
+
   def initialize(cards, ranks_ascending)
     @cards_hand = cards
     @ranks_ascending = ranks_ascending
@@ -126,6 +120,7 @@ class BeloteDeck < Deck
 end
 
 class BeloteDeckHand < Hand
+
   def get_rank_key(card)
     @ranks_ascending.key(card.rank)
   end
@@ -136,18 +131,54 @@ class BeloteDeckHand < Hand
   end
 
   def belote?
-    pairs = [:spades, :hearts, :diamonds, :clubs].product([:king, :queen]).
-          map { |s, r| Card.new(r, s) }
-    cards_hand_combinations = @cards_hand.combination(2).to_a
+    SUITS.any? do |suit|
+      has_queen = @cards_hand.include?(Card.new(:queen, suit))
+      has_king  = @cards_hand.include?(Card.new(:king,  suit))
 
-    cards_hand_combinations.include?([pairs[0], pairs[1]]) or
-    cards_hand_combinations.include?([pairs[2], pairs[3]]) or
-    cards_hand_combinations.include?([pairs[4], pairs[5]]) or
-    cards_hand_combinations.include?([pairs[6], pairs[7]])
+      has_queen && has_king
+    end
   end
 
   def sort
     @cards_hand.sort_by { |x| [x.suit, get_rank_key(x)] }.reverse
+  end
+
+  def tierce?
+    consecutive?(3)
+  end
+
+  def quarte?
+    consecutive?(4)
+  end
+
+  def quint?
+    consecutive?(5)
+  end
+
+  def carre_of_jacks?
+    carre_of?(:jack)
+  end
+
+  def carre_of_nines?
+    carre_of?(9)
+  end
+
+  def carre_of_aces?
+    carre_of?(:ace)
+  end
+
+  private
+
+  def carre_of?(rank)
+    @cards_hand.count { |card| card.rank == rank } == 4
+  end
+
+  def consecutive?(length)
+    sort.each_cons(length).each do |x|
+      result = are_n_numbers_consecutive(length, x)
+      if result then return true end
+    end
+    false
   end
 
   def are_n_numbers_consecutive(n, x)
@@ -157,48 +188,6 @@ class BeloteDeckHand < Hand
                                            get_rank_key(y)) == 1) }
     end
     false
-  end
-
-  def tierce?
-    sort.each_cons(3).each do |x|
-      result = are_n_numbers_consecutive(3, x)
-      if result then return true end
-    end
-    false
-  end
-
-  def quarte?
-    sort.each_cons(4).each do |x|
-      result = are_n_numbers_consecutive(4, x)
-      if result then return true end
-    end
-    false
-  end
-
-  def quint?
-    sort.each_cons(5).each do |x|
-      result = are_n_numbers_consecutive(5, x)
-      if result then return true end
-    end
-    false
-  end
-
-  def carre_of_jacks?
-    jacks = [:spades, :hearts, :diamonds, :clubs].product([:jack])
-    @cards_hand.include?(jacks[0]) and @cards_hand.include?(jacks[1]) and
-    @cards_hand.include?(jacks[2]) and @cards_hand.include?(jacks[3])
-  end
-
-  def carre_of_nines?
-    nines = [:spades, :hearts, :diamonds, :clubs].product([9])
-    @cards_hand.include?(nines[0]) and @cards_hand.include?(nines[1]) and
-    @cards_hand.include?(nines[2]) and @cards_hand.include?(nines[3])
-  end
-
-  def carre_of_aces?
-    aces = [:spades, :hearts, :diamonds, :clubs].product([:aces])
-    @cards_hand.include?(aces[0]) and @cards_hand.include?(aces[1]) and
-    @cards_hand.include?(aces[2]) and @cards_hand.include?(aces[3])
   end
 end
 
@@ -220,18 +209,23 @@ class SixtySixDeck < Deck
 end
 
 class SixtySixDeckHand < Hand
-  def twenty?(trump_suit)
-    temp = [:spades, :hearts, :diamonds, :clubs] - [trump_suit]
-    pairs = temp.product([:queen, :king]).map { |s, r| Card.new(r, s) }
-    cards_hand_combinations = @cards_hand.combination(2).to_a
 
-    cards_hand_combinations.include?([pairs[0], pairs[1]]) or
-    cards_hand_combinations.include?([pairs[2], pairs[3]]) or
-    cards_hand_combinations.include?([pairs[4], pairs[5]])
+  def twenty?(trump_suit)
+    pair_of_queen_and_king?(SUITS - [trump_suit])
   end
 
   def forty?(trump_suit)
-    @cards_hand.combination(2).to_a.include?(
-      [Card.new(:queen, trump_suit), Card.new(:king, trump_suit)])
+    pair_of_queen_and_king?([trump_suit])
+  end
+
+  private
+
+  def pair_of_queen_and_king?(allowed_suits)
+    allowed_suits.any? do |suit|
+      has_queen = @cards_hand.include?(Card.new(:queen, suit))
+      has_king  = @cards_hand.include?(Card.new(:king, suit))
+
+      has_queen && has_king
+    end
   end
 end

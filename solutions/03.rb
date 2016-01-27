@@ -26,7 +26,7 @@ class RationalSequence
     end
   end
 
-  def each
+  def each(&block)
     i, counter = 2, 0
     while counter < @limit
       if get_next_rational(i) != nil
@@ -46,17 +46,18 @@ class PrimeSequence
     @limit = limit
   end
 
-  def each
-    counter = 0
-    number = 2
-    while counter < @limit
-      if number.is_prime?
-        yield number
-        counter += 1
-        number += 1
-      else
-        number += 1
-      end
+  def each(&block)
+    enum_for(:all_primes).lazy.take(@limit).each(&block)
+  end
+
+  private
+
+  def all_primes
+    current = 2
+
+    loop do
+      yield current if current.is_prime?
+      current += 1
     end
   end
 end
@@ -70,7 +71,7 @@ class FibonacciSequence
     @second = second
   end
 
-  def each
+  def each(&block)
     current, subsequent = @first, @second
     counter = 0
     while counter < @limit
